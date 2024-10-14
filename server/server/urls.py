@@ -17,18 +17,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
-from apis import views
-from apis.functions import user, game
+from apis import views, functions
 urlpatterns = [
     path('admin/', admin.site.urls),
     # re_path('show_res', views.show_res, name = 'show_res'),
-    re_path('userRegister', user.userRegister, name = 'userRegister'),
-    re_path('userLogin', user.userLogin, name = 'userLogin'),
-    re_path('userAlter', user.userAlter, name = 'userAlter'),
-    re_path('userAddGame', user.userAddGame, name = 'userAddGame'),
-    re_path('userAddPublisher', user.userAddPublisher, name = 'userAddPublisher'),
-    re_path('userBuyGame', user.userBuyGame, name = 'userBuyGame'),
-    re_path('gameSearch', game.gameSearch, name = 'gameSearch'),
+    re_path('userRegister', functions.register, name = 'userRegister'),
+    re_path('userLogin', functions.login, name = 'userLogin'),
+    re_path('userAlter', functions.alterUser, name = 'userAlter'),
+    re_path('userAddGame', functions.addGame, name = 'userAddGame'),
+    re_path('userAddPublisher', functions.addPublisher, name = 'userAddPublisher'),
+    re_path('userBuyGame', functions.buyGame, name = 'userBuyGame'),
+    re_path('searchGame', functions.searchGame, name = 'searchGame'),
     re_path('get-async-routes', views.get_async_routes, name = 'get-async-routes'),
     re_path('refresh-token', views.refresh_token, name = 'refresh-token'),
     re_path('modify', views.modify, name = 'modify'),
