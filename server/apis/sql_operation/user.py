@@ -16,7 +16,7 @@ def user_insert(serial, username, nickname, password, role, email):
         VALUE (%d, %s, %s, %s, %s, %s, %f, %s, %s);
     '''
     cursor.execute(insert_query, 
-        (serial, username, nickname, password, role, email, 0.0, '_', '_'))
+        (serial, username, nickname, password, role, email, 0.0, None, None))
     closeSQL(conn, cursor)
     
 def user_update(serial, altertype, content):

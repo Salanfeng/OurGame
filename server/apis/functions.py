@@ -11,6 +11,7 @@ from sql_operation.user import *
 from sql_operation.game import *
 from sql_operation.publisher import *
 from sql_operation.usergame import *
+from sql_operation.comment import *
 
 db_params = {
     "host": settings.DATABASES['default']['HOST'],
@@ -231,9 +232,6 @@ def searchGame(request):
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
-            conn = MySQLdb.connect(**db_params)
-            cursor = conn.cursor()
-            
             keywords = body['keywords']
             inf1 = game_search('gamename', keywords)
             inf2 = game_search('information', keywords)
@@ -245,11 +243,73 @@ def searchGame(request):
                     'data': inf
                 })
             else:
-                return JsonResponse(failInf('Search Fail: No Similar Inf'), status=400)
+                return JsonResponse(failInf('Search Game Fail: No Similar Inf'), status=400)
         
         except MySQLdb.Error as e:
-            return JsonResponse(failInf('Search Fail: ' + str(e)), status=500)
+            return JsonResponse(failInf('Search Game Fail: ' + str(e)), status=500)
         except json.JSONDecodeError:
-            return JsonResponse(failInf('Search Fail: Invalid JSON'), status=400) 
-    return JsonResponse(failInf('Search Fail: Invalid Request Method'), status=405)
+            return JsonResponse(failInf('Search Game Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Search Game Fail: Invalid Request Method'), status=405)
 
+@csrf_exempt
+def makeComment(request):
+    '''
+    用户进行评论
+    body: commentserial, userserial, gameserial, commentedserial, content
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            userserial = body['userserial']
+            user = user_select(userserial)
+            
+            gameserial = body['gameserial']
+            if gameserial != None:
+                game = game_select(gameserial)
+                if not game:
+                    return JsonResponse(failInf('Make Comment Fail: No Such Game'), status=400)
+                
+            commentedserial = body['commentedserial']
+            if commentedserial != None:
+                comment = comment_select(commentedserial)
+                if not comment:
+                    return JsonResponse(failInf('Make Comment Fail: No Such Comment'), status=400)
+            
+            if user:
+                commentserial = body['commentserial']
+                content = body['content']
+                comment_insert(commentserial, userserial, gameserial, commentedserial, content)
+                return JsonResponse(successInf('Make Comment Succeed'))
+            else:
+                return JsonResponse(failInf('Make Comment Fail: No Such User'), status=400)
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Make Comment Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Make Comment Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Make Comment Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def agreeComment(request):
+    '''
+    用户进行评论
+    body: commentserial, agreeornot
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            commentserial = body['commentserial']
+            comment = comment_select(commentserial)
+            
+            if comment:
+                agreeOrNot = body['agreeornot']
+                comment_update(commentserial, agreeOrNot, 1)
+                return JsonResponse(successInf('Agree Comment Succeed'))
+            else:
+                return JsonResponse(failInf('Agree Comment Fail: No Such User'), status=400)
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Agree Comment Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Agree Comment Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Agree Comment Fail: Invalid Request Method'), status=405)
