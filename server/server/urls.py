@@ -30,6 +30,7 @@ urlpatterns = [
     re_path('searchGame', functions.searchGame, name = 'searchGame'),
     re_path('makeComment', functions.makeComment, name = 'makeComment'),
     re_path('agreeComment', functions.agreeComment, name = 'agreeComment'),
+    re_path('queryHighAgreeComment', functions.queryHighAgreeComment, name = 'queryHighAgreeComment'),
     re_path('get-async-routes', views.get_async_routes, name = 'get-async-routes'),
     re_path('refresh-token', views.refresh_token, name = 'refresh-token'),
     re_path('modify', views.modify, name = 'modify'),

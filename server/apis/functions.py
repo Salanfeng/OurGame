@@ -68,6 +68,7 @@ def login(request):
                 if body['password'] == password:
                     return JsonResponse({
                         'success': True,
+                        'message': 'Login Succeed',
                         'data': [{
                             'username': user[0],
                             'nickname': user[1],
@@ -240,6 +241,7 @@ def searchGame(request):
             if inf:
                 return JsonResponse({
                     'success': True,
+                    'message': 'Search Game Succeed',
                     'data': inf
                 })
             else:
@@ -292,7 +294,7 @@ def makeComment(request):
 @csrf_exempt
 def agreeComment(request):
     '''
-    用户进行评论
+    用户对评论点赞或点踩
     body: commentserial, agreeornot
     '''
     if request.method == 'POST':
@@ -313,3 +315,26 @@ def agreeComment(request):
         except json.JSONDecodeError:
             return JsonResponse(failInf('Agree Comment Fail: Invalid JSON'), status=400) 
     return JsonResponse(failInf('Agree Comment Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def queryHighAgreeComment(request):
+    '''
+    用户查询高赞同或高反对评论
+    body: agreeornot
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            agreeOrNot = body['agreeornot']
+            comments = comment_select_DESC(agreeOrNot, 100)
+            return JsonResponse({
+                'success': True,
+                'message': 'Query High Comments Succeed',
+                'data': comments
+            })
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Query High Comments Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Query High Comments Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Query High Comments Fail: Invalid Request Method'), status=405)

@@ -44,3 +44,16 @@ def comment_update(serial, altertype, content):
         '''
         cursor.execute(alter_query, (altertype, content, serial))
     closeSQL(conn, cursor)
+    
+def comment_select_DESC(agreeOrNot, limit):
+    conn, cursor = connectSQL()
+    select_query = '''
+        SELECT * 
+        FROM comments 
+        WHERE COUNT(*) <= %d
+        ORDERED BY %s DESC
+    '''
+    cursor.execute(select_query, (limit, agreeOrNot))
+    result = cursor.fetchall()
+    closeSQL(conn, cursor)
+    return result
