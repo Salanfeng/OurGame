@@ -1,10 +1,14 @@
 from server.apis.sql_operation.macros import *
 
-def game_select(serial):
+def game_select(value, selectType='serial'):
     conn, cursor = connectSQL()
-    check_query = 'SELECT * FROM games WHERE serial = %d'
-    cursor.execute(check_query, (serial))
-    result = cursor.fetchone()
+    select_query = '''
+        SELECT * 
+        FROM games
+        WHERE %s = %s
+    '''
+    cursor.execute(select_query, (selectType, value))
+    result = cursor.fetchall()
     closeSQL(conn, cursor)
     return result
 
@@ -13,7 +17,7 @@ def game_insert(serial, gamename, gametype, publisher, information, price):
     insert_query = '''
         INSERT INTO 
         games(serial, gamename, gametype, publisherSerial, information, price)
-        VALUE (%d, %s, %s, %d, %s, %f)
+        VALUE (%s, %s, %s, %s, %s, %f)
     '''
     cursor.execute(insert_query, 
         (serial, gamename, gametype, publisher, information, price))

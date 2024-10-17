@@ -1,17 +1,23 @@
 import os
 import MySQLdb
 import json
+from datetime import *
 from responses.responseInf import *
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST, require_GET
 from django.conf import settings
+
 from sql_operation.user import *
 from sql_operation.game import *
 from sql_operation.publisher import *
-from sql_operation.usergame import *
 from sql_operation.comment import *
+from sql_operation.community import *
+from sql_operation.activity import *
+
+from sql_operation.usergame import *
+from sql_operation.useractivity import *
 
 db_params = {
     "host": settings.DATABASES['default']['HOST'],
@@ -254,6 +260,33 @@ def searchGame(request):
     return JsonResponse(failInf('Search Game Fail: Invalid Request Method'), status=405)
 
 @csrf_exempt
+def searchComment(request):
+    '''
+    评论的近似搜索
+    body: keywords
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            keywords = body['keywords']
+            inf = comment_search('content', keywords)
+            
+            if inf:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Search Comment Succeed',
+                    'data': inf
+                })
+            else:
+                return JsonResponse(failInf('Search Comment Fail: No Similar Inf'), status=400)
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Search Comment Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Search Comment Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Search Comment Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
 def makeComment(request):
     '''
     用户进行评论
@@ -320,13 +353,14 @@ def agreeComment(request):
 def queryHighAgreeComment(request):
     '''
     用户查询高赞同或高反对评论
-    body: agreeornot
+    body: agreeornot, limit
     '''
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
             agreeOrNot = body['agreeornot']
-            comments = comment_select_DESC(agreeOrNot, 100)
+            limit = body['limit']
+            comments = comment_select_DESC(agreeOrNot, limit)
             return JsonResponse({
                 'success': True,
                 'message': 'Query High Comments Succeed',
@@ -338,3 +372,120 @@ def queryHighAgreeComment(request):
         except json.JSONDecodeError:
             return JsonResponse(failInf('Query High Comments Fail: Invalid JSON'), status=400) 
     return JsonResponse(failInf('Query High Comments Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def queryHighCommentGame(request):
+    '''
+    用户查询高评论游戏
+    body: limit
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            limit = body['limit']
+            serials = comment_select_group_DESC('gameserial', limit)
+            gameserials = [serial[0] for serial in serials]
+            games = []
+            for gameserial in gameserials:
+                game = game_select(gameserial)
+                games.append(game)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Query High Comment Game Succeed',
+                'data': games
+            })
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Query High Comment Game Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Query High Comment Game Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Query High Comment Game Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def queryHighCommentCommunity(request):
+    '''
+    用户查询高评论社区
+    body: limit
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            limit = body['limit']
+            serials = comment_select_group_DESC('communityserial', limit)
+            communityserials = [serial[0] for serial in serials]
+            communities = []
+            for communityserial in communityserials:
+                community = community_select(communityserial)
+                communities.append(community)
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Query High Comment Community Succeed',
+                'data': communities
+            })
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Query High Comment Community Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Query High Comment Community Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Query High Comment Community Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def queryPublisherInf(request):
+    '''
+    用户查询发行商及相关游戏
+    body: publisherserial
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            publisherserial = body['publisherserial']
+            publisher = publisher_select(publisherserial)
+            games = game_select(publisherserial, 'publisherserial')
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Query Publisher Information Succeed',
+                'data': [publisher, games]
+            })
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Query Publisher Information Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Query Publisher Information Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Query Publisher Information Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def attendActivity(request):
+    '''
+    用户参加活动
+    body: userserial, activityserial, time
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            userserial = body['userserial']
+            activityserial = body['activityserial']
+            time = body['time']
+            user = user_select(userserial)
+            activity = activity_select(userserial)
+            
+            if not user:
+                return JsonResponse(failInf('Attend Activity Fail: No Such User'), status=400)
+            if not activity:
+                return JsonResponse(failInf('Attend Activity Fail: No Such Activity'), status=400)
+            
+            time = datetime.strptime(time, '%Y-%m-%d %H:%M:%S')  
+            if activity[4] <= time < activity[5]:
+                useractivity_insert(activityserial, userserial)
+                return JsonResponse(successInf('Attend Activity Succeed'))
+            else:
+                return JsonResponse(failInf('Attend Activity Fail: Not In Time'))
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Attend Activity Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Attend Activity Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Attend Activity Fail: Invalid Request Method'), status=405)
+
