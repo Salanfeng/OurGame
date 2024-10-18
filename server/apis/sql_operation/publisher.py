@@ -4,7 +4,7 @@ def publisher_select(value, selectType='serial'):
     conn, cursor = connectSQL()
     check_query = 'SELECT * FROM publishers WHERE %s = %s'
     cursor.execute(check_query, (selectType, value))
-    result = cursor.fetchone()
+    result = cursor.fetchall()
     closeSQL(conn, cursor)
     return result
 

@@ -15,9 +15,12 @@ from sql_operation.publisher import *
 from sql_operation.comment import *
 from sql_operation.community import *
 from sql_operation.activity import *
+from sql_operation.achievement import *
 
 from sql_operation.usergame import *
 from sql_operation.useractivity import *
+from sql_operation.userachievement import *
+from sql_operation.usercommunity import *
 
 db_params = {
     "host": settings.DATABASES['default']['HOST'],
@@ -37,7 +40,7 @@ def register(request):
         try:
             body = json.loads(request.body)
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             
             if not user:
                 username = body['username']
@@ -67,7 +70,7 @@ def login(request):
         try:
             body = json.loads(request.body)
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             
             if user:
                 password = user[2]
@@ -106,7 +109,7 @@ def alterUser(request):
         try:
             body = json.loads(request.body)
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             
             if user:
                 alterType = body['type']
@@ -137,9 +140,9 @@ def addGame(request):
             body = json.loads(request.body)
             
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             publisherserial = body['publisherserial']
-            publish = publisher_select(publisherserial)
+            publish = publisher_select(publisherserial)[0]
             
             if user and publish:
                 role = user[3]
@@ -175,7 +178,7 @@ def addPublisher(request):
         try:
             body = json.loads(request.body)
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             
             if user:
                 role = user[3]
@@ -206,9 +209,9 @@ def buyGame(request):
         try:
             body = json.loads(request.body)
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             gameserial = body['gameserial']
-            game = game_select(gameserial)
+            game = game_select(gameserial)[0]
             
             if user and game:
                 balance = user[6]
@@ -296,17 +299,17 @@ def makeComment(request):
         try:
             body = json.loads(request.body)
             userserial = body['userserial']
-            user = user_select(userserial)
+            user = user_select(userserial)[0]
             
             gameserial = body['gameserial']
             if gameserial != None:
-                game = game_select(gameserial)
+                game = game_select(gameserial)[0]
                 if not game:
                     return JsonResponse(failInf('Make Comment Fail: No Such Game'), status=400)
                 
             commentedserial = body['commentedserial']
             if commentedserial != None:
-                comment = comment_select(commentedserial)
+                comment = comment_select(commentedserial)[0]
                 if not comment:
                     return JsonResponse(failInf('Make Comment Fail: No Such Comment'), status=400)
             
@@ -334,7 +337,7 @@ def agreeComment(request):
         try:
             body = json.loads(request.body)
             commentserial = body['commentserial']
-            comment = comment_select(commentserial)
+            comment = comment_select(commentserial)[0]
             
             if comment:
                 agreeOrNot = body['agreeornot']
@@ -387,7 +390,7 @@ def queryHighCommentGame(request):
             gameserials = [serial[0] for serial in serials]
             games = []
             for gameserial in gameserials:
-                game = game_select(gameserial)
+                game = game_select(gameserial)[0]
                 games.append(game)
             
             return JsonResponse({
@@ -416,7 +419,7 @@ def queryHighCommentCommunity(request):
             communityserials = [serial[0] for serial in serials]
             communities = []
             for communityserial in communityserials:
-                community = community_select(communityserial)
+                community = community_select(communityserial)[0]
                 communities.append(community)
             
             return JsonResponse({
@@ -442,7 +445,7 @@ def queryPublisherInf(request):
             body = json.loads(request.body)
             publisherserial = body['publisherserial']
             publisher = publisher_select(publisherserial)
-            games = game_select(publisherserial, 'publisherserial')
+            games = game_select(publisherserial, 'publisherserial')[0]
             
             return JsonResponse({
                 'success': True,
@@ -468,8 +471,8 @@ def attendActivity(request):
             userserial = body['userserial']
             activityserial = body['activityserial']
             time = body['time']
-            user = user_select(userserial)
-            activity = activity_select(userserial)
+            user = user_select(userserial)[0]
+            activity = activity_select(activityserial)[0]
             
             if not user:
                 return JsonResponse(failInf('Attend Activity Fail: No Such User'), status=400)
@@ -489,3 +492,83 @@ def attendActivity(request):
             return JsonResponse(failInf('Attend Activity Fail: Invalid JSON'), status=400) 
     return JsonResponse(failInf('Attend Activity Fail: Invalid Request Method'), status=405)
 
+@csrf_exempt
+def acquireAchievement(request):
+    '''
+    用户获得成就
+    body: userserial, activityserial, gameserial, achievementserial, time
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            userserial = body['userserial']
+            activityserial = body['activityserial']
+            gameserial = body['gameserial']
+            achievementserial = body['achievementserial']
+            time = body['time']
+            user = user_select(userserial)[0]
+            activity = activity_select(activityserial)[0]
+            game = game_select(gameserial)[0]
+            achievement = achievement_get(gameserial, achievementserial)[0]
+            userachievement = userachievement_select(userserial, gameserial, achievementserial)[0]
+            
+            if not user:
+                return JsonResponse(failInf('Acquire Achievement Fail: No Such User'), status=400)
+            if not activity:
+                return JsonResponse(failInf('Acquire Achievement Fail: No Such Activity'), status=400)
+            if not game:
+                return JsonResponse(failInf('Acquire Achievement Fail: No Such Game'), status=400)
+            if not achievement:
+                return JsonResponse(failInf('Acquire Achievement Fail: No Such Achievement'), status=400)
+            if userachievement:
+                return JsonResponse(failInf('Acquire Achievement Fail: Already Have Achievement'), status=400)
+            
+            time = datetime.strptime(time, '%Y-%m-%d %H:%M:%S')  
+            if activity[4] <= time < activity[5]:
+                useractivity_update(activityserial, userserial, 'status', 'ed')
+                userachievement_insert(userserial, gameserial, achievementserial, str(time))
+                return JsonResponse(successInf('Acquire Achievement Succeed'))
+            else:
+                return JsonResponse(failInf('Acquire Achievement Fail: Not In Time'))
+        
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Acquire Achievement Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Acquire Achievement Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Acquire Achievement Fail: Invalid Request Method'), status=405)
+
+@csrf_exempt
+def joinCommunity(request):
+    '''
+    用户加入社区
+    body: userserial, communityserial
+    '''
+    if request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+            userserial = body['userserial']
+            communityserial = body['communityserial']
+            user = user_select(userserial)[0]
+            community = community_select(communityserial)[0]
+            usercommunity = usercommunity_get(communityserial, userserial)[0]
+            
+            if not user:
+                return JsonResponse(failInf('Join Community Fail: No Such User'), status=400)
+            if not community:
+                return JsonResponse(failInf('Join Community Fail: No Such Activity'), status=400)
+            if usercommunity:
+                return JsonResponse(failInf('Join Community Fail: Already In Community'), status=400)
+            
+            users = usercommunity_select(communityserial)
+            usercommunity_insert(communityserial, userserial)
+            return JsonResponse({
+                'success': True,
+                'message': 'Acquire Achievement Succeed',
+                'data': users
+            })
+            
+        except MySQLdb.Error as e:
+            return JsonResponse(failInf('Acquire Achievement Fail: ' + str(e)), status=500)
+        except json.JSONDecodeError:
+            return JsonResponse(failInf('Acquire Achievement Fail: Invalid JSON'), status=400) 
+    return JsonResponse(failInf('Acquire Achievement Fail: Invalid Request Method'), status=405)
